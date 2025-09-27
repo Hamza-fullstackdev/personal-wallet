@@ -74,7 +74,7 @@ export default function AddCategory() {
               }
             />
           </div>
-          <div className='col-span-2 flex flex-col gap-1.5'>
+          <div className='md:col-span-2 flex flex-col gap-1.5'>
             <Label htmlFor='balance'>Balance</Label>
             <Input
               type='number'
