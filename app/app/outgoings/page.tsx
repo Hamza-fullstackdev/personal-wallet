@@ -16,7 +16,7 @@ interface Category {
   name: string;
   balance: number;
 }
-export default function Incomings() {
+export default function Outgoing() {
   const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState({});
   const navigate = useRouter();
@@ -32,7 +32,7 @@ export default function Incomings() {
   const handleFormData = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      const res = await fetch(`/api/user/incomings/add`, {
+      const res = await fetch(`/api/user/outgoings/add`, {
         method: "POST",
         credentials: "include",
         headers: {
@@ -52,10 +52,10 @@ export default function Incomings() {
   };
   return (
     <section className='my-10'>
-      <h1 className='text-2xl font-bold'>Incomings</h1>
+      <h1 className='text-2xl font-bold'>Outgoings</h1>
       <form className='mt-5 flex flex-col gap-4' onSubmit={handleFormData}>
         <div className='flex flex-col gap-1'>
-          <Label htmlFor='description'>Label Incomings</Label>
+          <Label htmlFor='description'>Label Outgoings</Label>
           <Input
             className='mt-2'
             type='text'
@@ -70,7 +70,7 @@ export default function Incomings() {
           />
         </div>
         <div className='flex flex-col gap-1'>
-          <Label htmlFor='balance'>Incoming Amount</Label>
+          <Label htmlFor='balance'>Outgoing Amount</Label>
           <Input
             className='mt-2'
             type='number'
@@ -78,20 +78,20 @@ export default function Incomings() {
             name='balance'
             required
             autoComplete='off'
-            placeholder='Enter incoming amount'
+            placeholder='Enter outgoing amount'
             onChange={(e) =>
               setFormData({ ...formData, balance: e.target.value })
             }
           />
         </div>
         <div className='flex flex-col gap-1'>
-          <Label htmlFor='categoryId'>Add Incomings in</Label>
+          <Label htmlFor='categoryId'>Outgoing from</Label>
           <Select
             name='categoryId'
             onValueChange={(e) => setFormData({ ...formData, categoryId: e })}
           >
             <SelectTrigger className='w-full'>
-              <SelectValue placeholder='Add Incomings in' />
+              <SelectValue placeholder='Outgoing from' />
             </SelectTrigger>
             <SelectContent>
               {categories.map((category: Category) => (
@@ -107,7 +107,7 @@ export default function Incomings() {
             type='submit'
             className='w-full py-3 px-4 bg-gradient-to-r from-[#524ffe] to-[#3a287a] cursor-pointer text-white rounded-full text-sm'
           >
-            Add Incomings
+            Add Outcomings
           </button>
         </div>
       </form>

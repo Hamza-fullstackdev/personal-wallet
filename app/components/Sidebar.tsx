@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowDownRight, Folder, Inbox, Pen } from "lucide-react";
+import { ArrowDownRight, ArrowUpLeft, Folder, Inbox, Pen } from "lucide-react";
 
 import {
   Sidebar as SidebarRoot,
@@ -29,6 +29,11 @@ const items = [
     title: "Incomings",
     url: "/app/incomings",
     icon: ArrowDownRight,
+  },
+  {
+    title: "Outgoings",
+    url: "/app/outgoings",
+    icon: ArrowUpLeft,
   },
 ];
 const Sidebar = () => {

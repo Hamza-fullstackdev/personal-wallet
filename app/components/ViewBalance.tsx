@@ -45,7 +45,7 @@ const ViewBalance = () => {
             </div>
           </CardContent>
         </Card>
-        {(categories.length > 0 &&
+        {categories.length > 0 &&
           categories?.map((category: Category) => (
             <Card key={category._id}>
               <CardHeader>
@@ -61,9 +61,7 @@ const ViewBalance = () => {
                 </div>
               </CardContent>
             </Card>
-          ))) || (
-          <h1 className='text-2xl font-bold'>Please add a category to begin</h1>
-        )}
+          ))}
       </div>
     </>
   );
