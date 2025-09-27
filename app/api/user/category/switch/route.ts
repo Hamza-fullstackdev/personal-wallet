@@ -1,21 +1,13 @@
 import { connectToDatabase } from "@/app/api/utils/db";
 import { verifyUser } from "@/app/api/utils/verify-user";
 import Category from "@/app/model/Category";
-import Loan from "@/app/model/Loan";
 import Notification from "@/app/model/Notification";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   await connectToDatabase();
-  const {
-    name,
-    reason,
-    balance,
-    categoryId,
-    date,
-    return: returnDate,
-  } = await request.json();
-  if (!name || !reason || !balance || !categoryId || !date || !returnDate) {
+  const { from, to, balance } = await request.json();
+  if (!from || !to || !balance) {
     return NextResponse.json(
       { message: "Please fill all fields" },
       { status: 400 }
@@ -23,31 +15,25 @@ export async function POST(request: Request) {
   }
   const userId = await verifyUser();
   try {
-    const category = await Category.findById(categoryId);
-    if (!category) {
+    const fromCategory = await Category.findById(from);
+    const toCategory = await Category.findById(to);
+    if (!fromCategory || !toCategory) {
       return NextResponse.json(
-        { message: "Category not found" },
+        { message: "Categories not found" },
         { status: 404 }
       );
     }
-    category.balance = Number(category.balance) - Number(balance);
-    await Loan.create({
-      userId,
-      name,
-      reason,
-      balance,
-      categoryId,
-      date,
-      return: returnDate,
-    });
+    fromCategory.balance = Number(fromCategory.balance) - Number(balance);
+    toCategory.balance = Number(toCategory.balance) + Number(balance);
+    await fromCategory.save();
+    await toCategory.save();
     await Notification.create({
       userId,
-      type: "loan",
-      title: `Loan balance of Rs ${balance} deducted from ${category.name}`,
-      message: reason,
+      type: "switch",
+      title: `Balance switched`,
+      message: `Rs ${balance} Switched from ${fromCategory.name} to ${toCategory.name}`,
     });
-    await category.save();
-    return NextResponse.json({ category }, { status: 201 });
+    return NextResponse.json({ fromCategory, toCategory }, { status: 200 });
   } catch (error) {
     console.error("Something went wrong", error);
     return NextResponse.json(

@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     await Notification.create({
       userId,
       type: "outgoing",
-      title: `Balance deducted from ${category.name}`,
+      title: `Rs ${balance} balance deducted from ${category.name}`,
       message: description,
     });
     await category.save();

@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     await Notification.create({
       userId,
       type: "incoming",
-      title: `Balance added in ${category.name}`,
+      title: `Rs ${balance} balance added in ${category.name}`,
       message: description,
     });
     await category.save();

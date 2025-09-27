@@ -1,6 +1,7 @@
 import React from "react";
 import {
   ArrowDownRight,
+  ArrowLeftRight,
   ArrowUpLeft,
   Folder,
   HandCoins,
@@ -32,6 +33,11 @@ const items = [
     title: "Categories",
     url: "/app/categories",
     icon: Folder,
+  },
+  {
+    title: "Switch Balance",
+    url: "/app/switch-balance",
+    icon: ArrowLeftRight,
   },
   {
     title: "Incomings",
