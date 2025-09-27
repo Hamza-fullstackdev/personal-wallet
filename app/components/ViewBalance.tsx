@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import Link from "next/link";
 
 interface Category {
   _id: string;
@@ -18,11 +19,13 @@ interface Category {
 const ViewBalance = () => {
   const [categories, setCategories] = useState([]);
   const [totalBalance, setTotalBalance] = useState(0);
+  const [loanBalance, setLoanBalance] = useState(0);
   const getUserCategrories = async () => {
     const res = await fetch("/api/user/category/get");
     const data = await res.json();
     setCategories(data.categories);
     setTotalBalance(data.totalBalance);
+    setLoanBalance(data.loanBalance);
   };
   useEffect(() => {
     getUserCategrories();
@@ -62,6 +65,22 @@ const ViewBalance = () => {
               </CardContent>
             </Card>
           ))}
+        <Card>
+          <CardHeader>
+            <CardTitle>Loan Given</CardTitle>
+            <CardDescription>To friends, collegues etc</CardDescription>
+            <CardAction className='text-sm'>
+              <Link href='/app/view-loan'>View details</Link>
+            </CardAction>
+          </CardHeader>
+          <CardContent>
+            <div>
+              <div className='text-2xl font-bold'>
+                Rs {loanBalance.toLocaleString()}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </>
   );
