@@ -6,10 +6,12 @@ import { useState } from "react";
 
 export default function AddCategory() {
   const [formData, setFormData] = useState({});
+  const [loading, setLoading] = useState(false);
   const navigate = useRouter();
   const handleFormData = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
+      setLoading(true);
       const res = await fetch(`/api/user/category/add`, {
         method: "POST",
         credentials: "include",
@@ -19,17 +21,28 @@ export default function AddCategory() {
         body: JSON.stringify(formData),
       });
       const data = await res.json();
+      setLoading(false);
       if (res.ok) {
         navigate.push("/app");
       } else {
         alert(data.message);
+        setLoading(false);
       }
-    } catch (error) {
+    } catch {
+      setLoading(false);
       alert("Something went wrong");
     }
   };
   return (
     <section className='my-10'>
+      {loading && (
+        <div className='fixed inset-0 z-50 flex items-center justify-center animate-fadeIn'>
+          <div className='absolute inset-0 bg-black/40'></div>
+          <div className='relative z-10'>
+            <div className='h-12 w-12 border-4 border-white/30 border-t-white rounded-full animate-spin'></div>
+          </div>
+        </div>
+      )}
       <h1 className='text-2xl font-bold'>Add new category</h1>
       <form onSubmit={handleFormData}>
         <div className='mt-5 grid grid-cols-1 sm:grid-cols-2 gap-4'>

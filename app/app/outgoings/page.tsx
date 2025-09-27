@@ -19,11 +19,14 @@ interface Category {
 export default function Outgoing() {
   const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState({});
+  const [loading, setLoading] = useState(false);
   const navigate = useRouter();
   const getUserCategrories = async () => {
+    setLoading(true);
     const res = await fetch("/api/user/category/get");
     const data = await res.json();
     setCategories(data.categories);
+    setLoading(false);
   };
   useEffect(() => {
     getUserCategrories();
@@ -32,6 +35,7 @@ export default function Outgoing() {
   const handleFormData = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
+      setLoading(true);
       const res = await fetch(`/api/user/outgoings/add`, {
         method: "POST",
         credentials: "include",
@@ -41,17 +45,28 @@ export default function Outgoing() {
         body: JSON.stringify(formData),
       });
       const data = await res.json();
+      setLoading(false);
       if (res.ok) {
         navigate.push("/app");
       } else {
         alert(data.message);
+        setLoading(false);
       }
-    } catch (error) {
+    } catch {
       alert("Something went wrong");
+      setLoading(false);
     }
   };
   return (
     <section className='my-10'>
+      {loading && (
+        <div className='fixed inset-0 z-50 flex items-center justify-center animate-fadeIn'>
+          <div className='absolute inset-0 bg-black/40'></div>
+          <div className='relative z-10'>
+            <div className='h-12 w-12 border-4 border-white/30 border-t-white rounded-full animate-spin'></div>
+          </div>
+        </div>
+      )}
       <h1 className='text-2xl font-bold'>Outgoings</h1>
       <form className='mt-5 flex flex-col gap-4' onSubmit={handleFormData}>
         <div className='flex flex-col gap-1'>
