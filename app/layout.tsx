@@ -11,6 +11,7 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "Personal Wallet",
   description: "A Secure Personal Wallet",
+  icons: "/favicon-32x32.png",
 };
 
 export default function RootLayout({
