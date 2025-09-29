@@ -85,6 +85,7 @@ export async function POST(req: Request) {
           _id: isUserExist._id.toString(),
           name: isUserExist.name,
           email: isUserExist.email,
+          currency: isUserExist.currency,
           createdAt: isUserExist.createdAt,
           updatedAt: isUserExist.updatedAt,
         },

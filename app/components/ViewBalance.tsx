@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import Link from "next/link";
+import { useSelector } from "react-redux";
 
 interface Category {
   _id: string;
@@ -21,6 +22,7 @@ const ViewBalance = () => {
   const [totalBalance, setTotalBalance] = useState(0);
   const [loanBalance, setLoanBalance] = useState(0);
   const [loading, setLoading] = useState(false);
+  const user = useSelector((state: any) => state.user);
   const getUserCategrories = async () => {
     setLoading(true);
     const res = await fetch("/api/user/category/get");
@@ -54,7 +56,7 @@ const ViewBalance = () => {
           <CardContent>
             <div>
               <div className='text-2xl font-bold'>
-                Rs {totalBalance.toLocaleString()}
+                {user.currency} {totalBalance.toLocaleString()}
               </div>
             </div>
           </CardContent>
@@ -70,7 +72,7 @@ const ViewBalance = () => {
               <CardContent>
                 <div>
                   <div className='text-2xl font-bold'>
-                    Rs {category.balance.toLocaleString()}
+                    {user.currency} {category.balance.toLocaleString()}
                   </div>
                 </div>
               </CardContent>
@@ -87,7 +89,7 @@ const ViewBalance = () => {
           <CardContent>
             <div>
               <div className='text-2xl font-bold'>
-                Rs {loanBalance.toLocaleString()}
+                {user.currency} {loanBalance.toLocaleString()}
               </div>
             </div>
           </CardContent>

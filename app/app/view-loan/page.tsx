@@ -7,6 +7,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 
 interface Loan {
   _id: string;
@@ -21,6 +22,7 @@ interface Loan {
 export default function ViewLoan() {
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(false);
+  const user = useSelector((state: any) => state.user);
   const getUserLoans = async () => {
     setLoading(true);
     const res = await fetch("/api/user/loan/history");
@@ -74,7 +76,7 @@ export default function ViewLoan() {
               <CardContent className='space-y-4'>
                 <div>
                   <p className='text-2xl font-bold text-gray-800'>
-                    Rs {loan.balance.toLocaleString()}
+                    {user.currency} {loan.balance.toLocaleString()}
                   </p>
                 </div>
                 <div className='flex justify-between text-sm'>

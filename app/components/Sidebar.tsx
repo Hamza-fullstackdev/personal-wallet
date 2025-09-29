@@ -8,6 +8,7 @@ import {
   History,
   Inbox,
   Pen,
+  Settings,
 } from "lucide-react";
 
 import {
@@ -58,6 +59,11 @@ const items = [
     title: "History",
     url: "/app/history",
     icon: History,
+  },
+  {
+    title: "Settings",
+    url: "/app/settings",
+    icon: Settings,
   },
 ];
 const Sidebar = () => {

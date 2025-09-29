@@ -4,6 +4,7 @@ interface IUser extends Document {
   name: string;
   email: string;
   password: string;
+  currency: string;
 }
 
 const userSchema = new Schema<IUser>(
@@ -24,6 +25,11 @@ const userSchema = new Schema<IUser>(
       required: true,
       trim: true,
       minlength: 8,
+    },
+    currency: {
+      type: String,
+      trim: true,
+      default: "PKR",
     },
   },
   { timestamps: true }

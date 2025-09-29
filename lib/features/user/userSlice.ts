@@ -4,6 +4,7 @@ interface UserState {
   _id: string | null;
   name: string;
   email: string;
+  currency: string;
   isAuthenticated: boolean;
   createdAt: Date | null;
   updatedAt: Date | null;
@@ -13,6 +14,7 @@ const initialState: UserState = {
   _id: null,
   name: "",
   email: "",
+  currency: "PKR",
   isAuthenticated: false,
   createdAt: null,
   updatedAt: null,
