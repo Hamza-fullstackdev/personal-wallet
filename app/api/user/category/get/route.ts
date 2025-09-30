@@ -39,7 +39,7 @@ export async function GET() {
       0
     );
 
-    const loans = await Loan.find({ userId });
+    const loans = await Loan.find({ userId, status: "pending" });
     const loanBalance = loans.reduce((acc, loan) => acc + loan.balance, 0);
 
     return NextResponse.json(

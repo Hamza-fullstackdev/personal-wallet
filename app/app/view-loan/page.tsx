@@ -3,12 +3,36 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 
+interface Category {
+  _id: string;
+  name: string;
+  balance: number;
+}
 interface Loan {
   _id: string;
   name: string;
@@ -21,6 +45,8 @@ interface Loan {
 
 export default function ViewLoan() {
   const [loans, setLoans] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(false);
   const user = useSelector((state: any) => state.user);
   const getUserLoans = async () => {
@@ -30,10 +56,44 @@ export default function ViewLoan() {
     setLoans(data.loans);
     setLoading(false);
   };
+  const getUserCategrories = async () => {
+    setLoading(true);
+    const res = await fetch("/api/user/category/get");
+    const data = await res.json();
+    setCategories(data.categories);
+    setLoading(false);
+  };
 
   useEffect(() => {
+    getUserCategrories();
     getUserLoans();
   }, []);
+
+  const handleFormData = async (e: any) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      const res = await fetch(`/api/user/loan/return`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+      const data = await res.json();
+      setLoading(false);
+      if (res.ok) {
+        getUserLoans();
+        setLoading(false);
+      } else {
+        alert(data.message);
+        setLoading(false);
+      }
+    } catch {
+      alert("Something went wrong");
+    }
+  };
   return (
     <section className='my-10'>
       {loading && (
@@ -102,6 +162,57 @@ export default function ViewLoan() {
                   </div>
                 </div>
               </CardContent>
+              {loan?.status === "pending" && (
+                <CardFooter className='flex item-end justify-end'>
+                  <AlertDialog>
+                    <AlertDialogTrigger>
+                      <button className='bg-green-500 text-white px-4 py-2 rounded text-sm cursor-pointer'>
+                        Returned
+                      </button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          Please select how you returned the loan
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          <Select
+                            name='categoryId'
+                            onValueChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                categoryId: e,
+                                loanId: loan._id,
+                                balance: loan.balance,
+                              })
+                            }
+                          >
+                            <SelectTrigger className='w-full'>
+                              <SelectValue placeholder='Select a category' />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categories.map((category: Category) => (
+                                <SelectItem
+                                  key={category._id}
+                                  value={category._id}
+                                >
+                                  {category.name} ({category.balance})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleFormData}>
+                          Continue
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </CardFooter>
+              )}
             </Card>
           ))}
       </div>
