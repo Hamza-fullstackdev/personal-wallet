@@ -49,6 +49,20 @@ const ViewBalance = () => {
       <div className='mt-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4'>
         <Card>
           <CardHeader>
+            <CardTitle>Total Amount</CardTitle>
+            <CardDescription>Balance + Loan Given</CardDescription>
+            <CardAction className='text-sm'>View details</CardAction>
+          </CardHeader>
+          <CardContent>
+            <div>
+              <div className='text-2xl font-bold'>
+                {user.currency} {(totalBalance + loanBalance).toLocaleString()}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
             <CardTitle>Total Balance</CardTitle>
             <CardDescription>Overall balance</CardDescription>
             <CardAction className='text-sm'>View details</CardAction>

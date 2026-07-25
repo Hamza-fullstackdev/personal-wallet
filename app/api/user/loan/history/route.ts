@@ -18,6 +18,14 @@ export async function GET(req: Request) {
       1,
     );
 
+    // Filtering parameters
+    const status = url.searchParams.get("status");
+    const search = url.searchParams.get("search");
+    const startDate = url.searchParams.get("startDate");
+    const endDate = url.searchParams.get("endDate");
+    const sortBy = url.searchParams.get("sortBy") || "createdAt";
+    const sortOrder = url.searchParams.get("sortOrder") === "asc" ? 1 : -1;
+
     const user = await User.findById(userId);
     if (!user)
       return NextResponse.json({ message: "User not found" }, { status: 404 });
@@ -34,24 +42,64 @@ export async function GET(req: Request) {
     const formatValue = (value: number) =>
       user.currency === "PKR" ? value : Number(value.toFixed(2));
 
-    const filter = { userId };
+    // Build filter object
+    const filter: Record<string, unknown> = { userId };
+
+    if (status && status !== "all") {
+      filter.status = status;
+    }
+
+    if (search && search.trim()) {
+      filter.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { reason: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    // Date range filter
+    if (startDate || endDate) {
+      filter.date = {};
+      if (startDate) {
+        (filter.date as Record<string, unknown>).$gte = new Date(startDate);
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        (filter.date as Record<string, unknown>).$lte = end;
+      }
+    }
+
     const totalItems = await Loan.countDocuments(filter);
     const totalPages = Math.ceil(totalItems / limit) || 1;
 
-    const loans = await Loan.find(filter)
-      .sort({ createdAt: -1 })
-      .skip((page - 1) * limit)
-      .limit(limit);
+    // Get unique loan statuses
+    const statuses = await Loan.distinct("status", { userId });
 
-    const loansWithConvertedBalance = loans.map((loan) => ({
-      ...loan.toObject(),
+    const loans = await Loan.find(filter)
+      .sort({ [sortBy]: sortOrder })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
+
+    const loansWithConvertedBalance = loans.map((loan: any) => ({
+      ...loan,
       balance: formatValue(loan.balance * userCurrencyPrice),
     }));
 
     return NextResponse.json(
       {
         loans: loansWithConvertedBalance,
-        meta: { totalItems, totalPages, page, perPage: limit },
+        meta: {
+          totalItems,
+          totalPages,
+          currentPage: page,
+          perPage: limit,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1,
+        },
+        filters: {
+          statuses,
+        },
       },
       { status: 200 },
     );
