@@ -76,7 +76,7 @@ export default function Outgoing() {
             type='text'
             id='description'
             name='description'
-            placeholder='Specify Incomings'
+            placeholder='Specify outgoing'
             required
             autoComplete='off'
             onChange={(e) =>

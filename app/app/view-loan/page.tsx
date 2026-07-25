@@ -27,6 +27,14 @@ import {
 } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface Category {
   _id: string;
@@ -48,12 +56,18 @@ export default function ViewLoan() {
   const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(false);
-  const user = useSelector((state: any) => state.user);
-  const getUserLoans = async () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const recordsPerPage = 9;
+  const user = useSelector((state: any) => state.user); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const getUserLoans = async (page = 1) => {
     setLoading(true);
-    const res = await fetch("/api/user/loan/history");
+    const res = await fetch(
+      `/api/user/loan/history?page=${page}&limit=${recordsPerPage}`,
+    );
     const data = await res.json();
-    setLoans(data.loans);
+    setLoans(data.loans || []);
+    setTotalPages(data.meta?.totalPages || 1);
     setLoading(false);
   };
   const getUserCategrories = async () => {
@@ -66,10 +80,10 @@ export default function ViewLoan() {
 
   useEffect(() => {
     getUserCategrories();
-    getUserLoans();
-  }, []);
+    getUserLoans(currentPage);
+  }, [currentPage]);
 
-  const handleFormData = async (e: any) => {
+  const handleFormData = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     try {
       setLoading(true);
@@ -84,7 +98,7 @@ export default function ViewLoan() {
       const data = await res.json();
       setLoading(false);
       if (res.ok) {
-        getUserLoans();
+        getUserLoans(currentPage);
         setLoading(false);
       } else {
         alert(data.message);
@@ -93,6 +107,37 @@ export default function ViewLoan() {
     } catch {
       alert("Something went wrong");
     }
+  };
+
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+      getUserLoans(page);
+    }
+  };
+
+  const getPageItems = (tp: number, cp: number) => {
+    const pages: number[] = [];
+    const windowSize = 4;
+
+    if (tp <= windowSize) {
+      for (let i = 1; i <= tp; i++) pages.push(i);
+      return pages;
+    }
+
+    let start = Math.max(1, cp - Math.floor(windowSize / 2));
+    let end = start + windowSize - 1;
+
+    if (end > tp) {
+      end = tp;
+      start = Math.max(1, end - windowSize + 1);
+    }
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    return pages;
   };
   return (
     <section className='my-10'>
@@ -117,8 +162,8 @@ export default function ViewLoan() {
                   loan.status === "returned"
                     ? "bg-green-100 text-green-600"
                     : loan.status === "pending"
-                    ? "bg-yellow-100 text-yellow-600"
-                    : "bg-red-100 text-red-600"
+                      ? "bg-yellow-100 text-yellow-600"
+                      : "bg-red-100 text-red-600"
                 }`}
               >
                 {loan.status}
@@ -165,7 +210,7 @@ export default function ViewLoan() {
               {loan?.status === "pending" && (
                 <CardFooter className='flex item-end justify-end'>
                   <AlertDialog>
-                    <AlertDialogTrigger>
+                    <AlertDialogTrigger asChild>
                       <button className='bg-green-500 text-white px-4 py-2 rounded text-sm cursor-pointer'>
                         Returned
                       </button>
@@ -216,6 +261,57 @@ export default function ViewLoan() {
             </Card>
           ))}
       </div>
+
+      {totalPages > 1 && (
+        <div className='flex justify-center mt-8'>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href='#'
+                  onClick={(e) => {
+                    e.preventDefault();
+                    goToPage(currentPage - 1);
+                  }}
+                  className={
+                    currentPage === 1 ? "pointer-events-none opacity-50" : ""
+                  }
+                />
+              </PaginationItem>
+
+              {getPageItems(totalPages, currentPage).map((p) => (
+                <PaginationItem key={p}>
+                  <PaginationLink
+                    href='#'
+                    isActive={currentPage === p}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      goToPage(p);
+                    }}
+                  >
+                    {p}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+
+              <PaginationItem>
+                <PaginationNext
+                  href='#'
+                  onClick={(e) => {
+                    e.preventDefault();
+                    goToPage(currentPage + 1);
+                  }}
+                  className={
+                    currentPage === totalPages
+                      ? "pointer-events-none opacity-50"
+                      : ""
+                  }
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
     </section>
   );
 }

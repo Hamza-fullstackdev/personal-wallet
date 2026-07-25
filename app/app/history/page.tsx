@@ -30,24 +30,29 @@ interface Notification {
 
 export default function History() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [totalPages, setTotalPages] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
 
   const recordsPerPage = 10;
 
-  const getUserNotifications = async () => {
+  const getUserNotifications = async (page = 1) => {
     setLoading(true);
-    const res = await fetch("/api/user/notifications");
+    const res = await fetch(
+      `/api/user/notifications?page=${page}&limit=${recordsPerPage}`,
+    );
     const data = await res.json();
-    setNotifications(data.notifications);
+    setNotifications(data.notifications || []);
+    setTotalPages(data.meta?.totalPages || 1);
     setLoading(false);
   };
 
   useEffect(() => {
-    getUserNotifications();
-  }, []);
+    getUserNotifications(currentPage);
+  }, [currentPage]);
 
+  // filter applies only to the current page's notifications returned by server
   const filteredLogs = searchTerm
     ? notifications.filter((log: Notification) => {
         const lowerSearch = searchTerm.toLowerCase().trim();
@@ -68,18 +73,43 @@ export default function History() {
       })
     : notifications;
 
-  const totalPages = Math.ceil(filteredLogs.length / recordsPerPage);
-  const indexOfLastRecord = currentPage * recordsPerPage;
-  const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
-  const currentRecords = filteredLogs.slice(
-    indexOfFirstRecord,
-    indexOfLastRecord
-  );
+  // notifications from the server are already paged; display them directly
+  const currentRecords = filteredLogs;
 
   const goToPage = (page: number) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
+      getUserNotifications(page);
     }
+  };
+
+  // Generate page items with sliding window of 4 buttons
+  const getPageItems = (tp: number, cp: number) => {
+    const pages: number[] = [];
+    const windowSize = 4;
+
+    if (tp <= windowSize) {
+      // If total pages <= 4, show all
+      for (let i = 1; i <= tp; i++) pages.push(i);
+      return pages;
+    }
+
+    // Calculate start of the sliding window
+    let start = Math.max(1, cp - Math.floor(windowSize / 2));
+    let end = start + windowSize - 1;
+
+    // Adjust if window goes beyond total pages
+    if (end > tp) {
+      end = tp;
+      start = Math.max(1, end - windowSize + 1);
+    }
+
+    // Fill the window
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    return pages;
   };
 
   return (
@@ -107,6 +137,7 @@ export default function History() {
             onChange={(e) => {
               setSearchTerm(e.target.value);
               setCurrentPage(1);
+              getUserNotifications(1);
             }}
           />
         </div>
@@ -133,7 +164,7 @@ export default function History() {
                         year: "numeric",
                         month: "short",
                         day: "numeric",
-                      }
+                      },
                     )}
                   </TableCell>
                   <TableCell className='capitalize'>
@@ -169,22 +200,20 @@ export default function History() {
                   />
                 </PaginationItem>
 
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (page) => (
-                    <PaginationItem key={page}>
-                      <PaginationLink
-                        href='#'
-                        isActive={currentPage === page}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          goToPage(page);
-                        }}
-                      >
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
-                  )
-                )}
+                {getPageItems(totalPages, currentPage).map((p, idx) => (
+                  <PaginationItem key={p + idx}>
+                    <PaginationLink
+                      href='#'
+                      isActive={currentPage === p}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        goToPage(p);
+                      }}
+                    >
+                      {p}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
 
                 <PaginationItem>
                   <PaginationNext

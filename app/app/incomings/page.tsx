@@ -35,6 +35,7 @@ export default function Incomings() {
   const handleFormData = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
+      setLoading(true);
       const res = await fetch(`/api/user/incomings/add`, {
         method: "POST",
         credentials: "include",
@@ -44,13 +45,16 @@ export default function Incomings() {
         body: JSON.stringify(formData),
       });
       const data = await res.json();
+      setLoading(false);
       if (res.ok) {
         navigate.push("/app");
       } else {
         alert(data.message);
+        setLoading(false);
       }
-    } catch (error) {
+    } catch {
       alert("Something went wrong");
+      setLoading(false);
     }
   };
   return (
