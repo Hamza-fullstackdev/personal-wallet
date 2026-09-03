@@ -1,8 +1,8 @@
-import React from "react";
 import {
   ArrowDownRight,
   ArrowLeftRight,
   ArrowUpLeft,
+  FileText,
   Folder,
   HandCoins,
   History,
@@ -59,6 +59,11 @@ const items = [
     title: "History",
     url: "/app/history",
     icon: History,
+  },
+  {
+    title: "Bank Statement",
+    url: "/app/bank-statement",
+    icon: FileText,
   },
   {
     title: "Settings",

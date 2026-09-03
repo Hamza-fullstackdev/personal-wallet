@@ -4,7 +4,6 @@ import { NextResponse } from "next/server";
 import { comparePassword } from "@/app/api/utils/hashing";
 import { config } from "@/app/api/utils/env-config";
 import jwt from "jsonwebtoken";
-import Notification from "@/app/model/Notification";
 
 interface LoginRequestBody {
   email: string;
@@ -92,12 +91,6 @@ export async function POST(req: Request) {
       },
       { status: 200 }
     );
-    await Notification.create({
-      userId: isUserExist._id,
-      title: "Welcome back!",
-      message: `Welcome back ${isUserExist.name}!, we are excited to see you again!`,
-      type: "login",
-    });
     response.cookies.set("token", token, {
       httpOnly: true,
       maxAge: 60 * 60 * 24 * 7,

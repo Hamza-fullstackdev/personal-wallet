@@ -250,16 +250,13 @@ export default function ViewLoan() {
         </div>
       )}
 
-      {/* Header Section */}
       <div className='mb-8'>
         <div className='mb-6'>
           <h1 className='font-bold text-3xl text-gray-800'>Loan History</h1>
         </div>
 
-        {/* Filters Section */}
         <div className='bg-gray-50 p-6 rounded-lg border border-gray-200 space-y-4'>
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4'>
-            {/* Search Filter */}
             <div className='flex flex-col gap-2'>
               <label className='text-sm font-medium text-gray-700'>
                 Search
@@ -275,7 +272,6 @@ export default function ViewLoan() {
               />
             </div>
 
-            {/* Status Filter */}
             <div className='flex flex-col gap-2'>
               <label className='text-sm font-medium text-gray-700'>
                 Status
@@ -295,7 +291,6 @@ export default function ViewLoan() {
               </Select>
             </div>
 
-            {/* Start Date Filter */}
             <div className='flex flex-col gap-2'>
               <label className='text-sm font-medium text-gray-700'>
                 From Date
@@ -308,7 +303,6 @@ export default function ViewLoan() {
               />
             </div>
 
-            {/* End Date Filter */}
             <div className='flex flex-col gap-2'>
               <label className='text-sm font-medium text-gray-700'>
                 To Date
@@ -321,7 +315,6 @@ export default function ViewLoan() {
               />
             </div>
 
-            {/* Sort Options */}
             <div className='flex flex-col gap-2'>
               <label className='text-sm font-medium text-gray-700'>Sort</label>
               <Select value={sortOrder} onValueChange={setSortOrder}>
@@ -336,7 +329,6 @@ export default function ViewLoan() {
             </div>
           </div>
 
-          {/* Reset Filters Button */}
           <div className='flex gap-2'>
             <Button
               onClick={handleResetFilters}
@@ -349,7 +341,6 @@ export default function ViewLoan() {
         </div>
       </div>
 
-      {/* Records Info */}
       {meta.totalItems > 0 && (
         <div className='mb-6'>
           <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-4 bg-gray-50 rounded-lg border border-gray-200'>
@@ -369,7 +360,6 @@ export default function ViewLoan() {
         </div>
       )}
 
-      {/* Cards Grid */}
       <div className='mt-5'>
         {loans.length > 0 ? (
           <>
@@ -380,13 +370,12 @@ export default function ViewLoan() {
                   className='relative border shadow-md hover:shadow-lg transition rounded-xl'
                 >
                   <span
-                    className={`absolute top-3 right-3 capitalize text-xs font-medium px-3 py-1 rounded-full ${
-                      loan.status === "returned"
+                    className={`absolute top-3 right-3 capitalize text-xs font-medium px-3 py-1 rounded-full ${loan.status === "returned"
                         ? "bg-green-100 text-green-600"
                         : loan.status === "pending"
                           ? "bg-yellow-100 text-yellow-600"
                           : "bg-red-100 text-red-600"
-                    }`}
+                      }`}
                   >
                     {loan.status}
                   </span>
@@ -484,7 +473,6 @@ export default function ViewLoan() {
               ))}
             </div>
 
-            {/* Pagination Section */}
             {meta.totalPages > 1 && (
               <div className='flex flex-col items-center justify-center mt-8 gap-4'>
                 <div className='text-sm text-gray-600'>

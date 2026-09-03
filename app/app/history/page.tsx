@@ -197,8 +197,6 @@ export default function History() {
           </div>
         </div>
       )}
-
-      {/* Header Section */}
       <div className='mb-8'>
         <div className='flex items-center justify-between mb-6'>
           <div>
@@ -206,10 +204,8 @@ export default function History() {
           </div>
         </div>
 
-        {/* Filters Section */}
         <div className='bg-gray-50 p-6 rounded-lg border border-gray-200 space-y-4'>
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4'>
-            {/* Search Filter */}
             <div className='flex flex-col gap-2'>
               <label className='text-sm font-medium text-gray-700'>
                 Search
@@ -224,8 +220,6 @@ export default function History() {
                 }}
               />
             </div>
-
-            {/* Type Filter */}
             <div className='flex flex-col gap-2'>
               <label className='text-sm font-medium text-gray-700'>Type</label>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -243,7 +237,6 @@ export default function History() {
               </Select>
             </div>
 
-            {/* Start Date Filter */}
             <div className='flex flex-col gap-2'>
               <label className='text-sm font-medium text-gray-700'>
                 From Date
@@ -256,7 +249,6 @@ export default function History() {
               />
             </div>
 
-            {/* End Date Filter */}
             <div className='flex flex-col gap-2'>
               <label className='text-sm font-medium text-gray-700'>
                 To Date
@@ -269,7 +261,6 @@ export default function History() {
               />
             </div>
 
-            {/* Sort Options */}
             <div className='flex flex-col gap-2'>
               <label className='text-sm font-medium text-gray-700'>Sort</label>
               <Select value={sortOrder} onValueChange={setSortOrder}>
@@ -284,7 +275,6 @@ export default function History() {
             </div>
           </div>
 
-          {/* Reset Filters Button */}
           <div className='flex gap-2'>
             <Button
               onClick={handleResetFilters}
@@ -297,7 +287,6 @@ export default function History() {
         </div>
       </div>
 
-      {/* Records Info */}
       {meta.totalItems > 0 && (
         <div className='mb-4 text-sm text-gray-600'>
           Showing <span className='font-semibold'>{startRecord}</span> to{" "}
@@ -306,7 +295,6 @@ export default function History() {
         </div>
       )}
 
-      {/* Table Section */}
       <div className='mt-5 space-y-4'>
         <div className='overflow-x-auto rounded-lg'>
           <Table>
@@ -356,7 +344,6 @@ export default function History() {
           </Table>
         </div>
 
-        {/* Table Stats - Bottom Right */}
         <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4'>
           <div />
           <div className='text-sm text-gray-600'>
@@ -368,7 +355,6 @@ export default function History() {
           </div>
         </div>
 
-        {/* Pagination Section */}
         {meta.totalPages > 1 && (
           <div className='flex flex-col items-center justify-center mt-8 gap-4'>
             <div className='text-sm text-gray-600'>

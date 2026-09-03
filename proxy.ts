@@ -4,11 +4,16 @@ import * as jose from "jose";
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET_KEY!);
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const token = request.cookies.get("token")?.value;
   const currentPath = request.nextUrl.pathname;
 
-  if (!token && (currentPath === "/app" || currentPath.startsWith("/app/"))) {
+  if (
+    !token &&
+    (currentPath === "/app" ||
+      currentPath.startsWith("/app/") ||
+      currentPath === "/bank-statement")
+  ) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/";
     return NextResponse.redirect(loginUrl);
@@ -30,5 +35,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/app", "/app/:path*"],
+  matcher: ["/app", "/app/:path*", "/bank-statement"],
 };
