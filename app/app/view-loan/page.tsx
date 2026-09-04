@@ -91,7 +91,7 @@ export default function ViewLoan() {
   const [endDate, setEndDate] = useState("");
   const [sortOrder, setSortOrder] = useState("desc");
   const recordsPerPage = 9;
-  const user = useSelector((state: any) => state.user); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const user = useSelector((state: any) => state.user);
 
   const buildQueryParams = useCallback(
     (page: number = 1): URLSearchParams => {
@@ -371,10 +371,10 @@ export default function ViewLoan() {
                 >
                   <span
                     className={`absolute top-3 right-3 capitalize text-xs font-medium px-3 py-1 rounded-full ${loan.status === "returned"
-                        ? "bg-green-100 text-green-600"
-                        : loan.status === "pending"
-                          ? "bg-yellow-100 text-yellow-600"
-                          : "bg-red-100 text-red-600"
+                      ? "bg-green-100 text-green-600"
+                      : loan.status === "pending"
+                        ? "bg-yellow-100 text-yellow-600"
+                        : "bg-red-100 text-red-600"
                       }`}
                   >
                     {loan.status}

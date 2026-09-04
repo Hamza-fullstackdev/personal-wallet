@@ -19,8 +19,6 @@ const A4_HEIGHT = 841.89;
 
 const styles = StyleSheet.create({
   page: {
-    // Extra top/bottom padding keeps body content clear of the corner
-    // decorations AND clear of the fixed footer on every page.
     paddingTop: 118,
     paddingBottom: 150,
     paddingHorizontal: 38,
@@ -30,7 +28,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     position: "relative",
   },
-  // Background SVG Graphics at exact corners of physical page
   decoration: {
     position: "absolute",
     top: 0,
@@ -39,7 +36,6 @@ const styles = StyleSheet.create({
     height: A4_HEIGHT,
   },
 
-  // Top Header Banner
   headerContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -109,7 +105,6 @@ const styles = StyleSheet.create({
     color: "#1e293b",
   },
 
-  // Account Information Box
   accountBox: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -142,7 +137,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Financial Highlights Bar
   summaryRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -202,7 +196,6 @@ const styles = StyleSheet.create({
     color: "#b91c1c",
   },
 
-  // Section Heading
   sectionHeading: {
     fontSize: 8,
     fontFamily: "Helvetica-Bold",
@@ -213,7 +206,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  // Statement Table
   table: {
     width: "100%",
     marginBottom: 18,
@@ -273,7 +265,6 @@ const styles = StyleSheet.create({
     borderTopColor: PURPLE,
   },
 
-  // Table Column Widths (Sum = 100%)
   colDate: { width: "12%" },
   colDesc: { width: "30%" },
   colCategory: { width: "15%" },
@@ -302,7 +293,6 @@ const styles = StyleSheet.create({
     color: "#047857",
   },
 
-  // Movement Badges
   badgeBase: {
     fontSize: 6.2,
     fontFamily: "Helvetica-Bold",
@@ -331,8 +321,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#dbeafe",
     color: "#1e40af",
   },
-
-  // Category Holdings Box
   categoryBox: {
     backgroundColor: "#ffffff",
     padding: 10,
@@ -371,9 +359,6 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
     color: PURPLE,
   },
-
-  // Footer — pinned well above the bottom corner decorations, with a
-  // divider line so it never visually collides with the last table row.
   footer: {
     position: "absolute",
     bottom: 45,
@@ -477,7 +462,11 @@ export const BankStatementPDF = ({ data }: { data: StatementData }) => {
 
           <View style={styles.headerMetaBox}>
             <View style={styles.statementDocBadge}>
-              <Text style={styles.statementDocText}>ACCOUNT STATEMENT</Text>
+              <Text style={styles.statementDocText}>
+                {data.filterPerson
+                  ? `STATEMENT — ${data.filterPerson.toUpperCase()}`
+                  : "ACCOUNT STATEMENT"}
+              </Text>
             </View>
             <Text style={styles.headerMetaLine}>
               Statement Ref:{" "}
@@ -517,59 +506,121 @@ export const BankStatementPDF = ({ data }: { data: StatementData }) => {
           </View>
 
           <View style={styles.accountCol}>
-            <Text style={styles.accountLabel}>Account Standing</Text>
-            <Text style={[styles.accountValue, { color: "#047857" }]}>
-              Active & Verified
-            </Text>
-            <Text style={styles.accountSubtext}>Reconciled Electronic Record</Text>
+            {data.filterPerson ? (
+              <>
+                <Text style={styles.accountLabel}>Counterparty / Person</Text>
+                <Text style={[styles.accountValue, { color: PURPLE }]}>
+                  {data.filterPerson}
+                </Text>
+                <Text style={styles.accountSubtext}>Filtered Individual Record</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.accountLabel}>Account Standing</Text>
+                <Text style={[styles.accountValue, { color: "#047857" }]}>
+                  Active & Verified
+                </Text>
+                <Text style={styles.accountSubtext}>Reconciled Electronic Record</Text>
+              </>
+            )}
           </View>
         </View>
 
-        <View style={styles.summaryRow}>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryCardLabel}>Opening Balance</Text>
-            <Text style={styles.summaryCardValue}>
-              {formatAmount(summary.openingBalance)}
-            </Text>
-          </View>
+        {data.filterPerson ? (
+          <View style={styles.summaryRow}>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryCardLabel}>Opening Outstanding</Text>
+              <Text style={styles.summaryCardValue}>
+                {formatAmount(summary.openingBalance)}
+              </Text>
+            </View>
 
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryCardLabel}>Total Incomings</Text>
-            <Text style={styles.summaryCardValueGreen}>
-              +{formatAmount(summary.totalIncoming)}
-            </Text>
-          </View>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryCardLabel}>Total Loans Given</Text>
+              <Text style={styles.summaryCardValueRed}>
+                -{formatAmount(summary.totalLoanGiven)}
+              </Text>
+            </View>
 
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryCardLabel}>Total Outgoings</Text>
-            <Text style={styles.summaryCardValueRed}>
-              -{formatAmount(summary.totalOutgoing)}
-            </Text>
-          </View>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryCardLabel}>Total Loans Returned</Text>
+              <Text style={styles.summaryCardValueGreen}>
+                +{formatAmount(summary.totalLoanReturned)}
+              </Text>
+            </View>
 
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryCardLabel}>Loans Given</Text>
-            <Text style={styles.summaryCardValueRed}>
-              -{formatAmount(summary.totalLoanGiven)}
-            </Text>
-          </View>
+            <View style={styles.summaryCardDark}>
+              <Text style={styles.summaryCardLabelDark}>Outstanding Balance</Text>
+              <Text style={styles.summaryCardValueDark}>
+                {formatAmount(summary.closingBalance)}
+              </Text>
+            </View>
 
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryCardLabel}>Loans Returned</Text>
-            <Text style={styles.summaryCardValueGreen}>
-              +{formatAmount(summary.totalLoanReturned)}
-            </Text>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryCardLabel}>Settlement Status</Text>
+              <Text
+                style={[
+                  styles.summaryCardValue,
+                  {
+                    color: summary.closingBalance === 0 ? "#047857" : "#d97706",
+                  },
+                ]}
+              >
+                {summary.closingBalance === 0 ? "Fully Settled" : "Pending Return"}
+              </Text>
+            </View>
           </View>
+        ) : (
+          <View style={styles.summaryRow}>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryCardLabel}>Opening Balance</Text>
+              <Text style={styles.summaryCardValue}>
+                {formatAmount(summary.openingBalance)}
+              </Text>
+            </View>
 
-          <View style={styles.summaryCardDark}>
-            <Text style={styles.summaryCardLabelDark}>Closing Balance</Text>
-            <Text style={styles.summaryCardValueDark}>
-              {formatAmount(summary.closingBalance)}
-            </Text>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryCardLabel}>Total Incomings</Text>
+              <Text style={styles.summaryCardValueGreen}>
+                +{formatAmount(summary.totalIncoming)}
+              </Text>
+            </View>
+
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryCardLabel}>Total Outgoings</Text>
+              <Text style={styles.summaryCardValueRed}>
+                -{formatAmount(summary.totalOutgoing)}
+              </Text>
+            </View>
+
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryCardLabel}>Loans Given</Text>
+              <Text style={styles.summaryCardValueRed}>
+                -{formatAmount(summary.totalLoanGiven)}
+              </Text>
+            </View>
+
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryCardLabel}>Loans Returned</Text>
+              <Text style={styles.summaryCardValueGreen}>
+                +{formatAmount(summary.totalLoanReturned)}
+              </Text>
+            </View>
+
+            <View style={styles.summaryCardDark}>
+              <Text style={styles.summaryCardLabelDark}>Closing Balance</Text>
+              <Text style={styles.summaryCardValueDark}>
+                {formatAmount(summary.closingBalance)}
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
 
-        <Text style={styles.sectionHeading}>Transaction Ledger</Text>
+        <Text style={styles.sectionHeading}>
+          {data.filterPerson
+            ? `Transaction Ledger — ${data.filterPerson}`
+            : "Transaction Ledger"}
+        </Text>
         <View style={styles.table}>
           <View style={styles.tableHeader} fixed>
             <Text style={[styles.tableHeaderCell, styles.colDate]}>Date</Text>
@@ -583,13 +634,13 @@ export const BankStatementPDF = ({ data }: { data: StatementData }) => {
               Movement
             </Text>
             <Text style={[styles.tableHeaderCell, styles.colDebit]}>
-              Debit
+              {data.filterPerson ? "Given" : "Debit"}
             </Text>
             <Text style={[styles.tableHeaderCell, styles.colCredit]}>
-              Credit
+              {data.filterPerson ? "Returned" : "Credit"}
             </Text>
             <Text style={[styles.tableHeaderCell, styles.colBalance]}>
-              Balance
+              {data.filterPerson ? "Outstanding" : "Balance"}
             </Text>
           </View>
 
@@ -598,10 +649,12 @@ export const BankStatementPDF = ({ data }: { data: StatementData }) => {
               {period.startDate || "Start"}
             </Text>
             <Text style={[styles.cellTextBold, styles.colDesc]}>
-              OPENING BALANCE
+              {data.filterPerson ? "OPENING OUTSTANDING" : "OPENING BALANCE"}
             </Text>
             <Text style={[styles.cellText, styles.colCategory]}>—</Text>
-            <Text style={[styles.cellTextBold, styles.colType]}>Balance</Text>
+            <Text style={[styles.cellTextBold, styles.colType]}>
+              {data.filterPerson ? "Position" : "Balance"}
+            </Text>
             <Text style={[styles.cellText, styles.colDebit]}>—</Text>
             <Text style={[styles.cellText, styles.colCredit]}>—</Text>
             <Text style={[styles.cellTextBold, styles.colBalance]}>
@@ -690,10 +743,12 @@ export const BankStatementPDF = ({ data }: { data: StatementData }) => {
               {period.endDate || "End"}
             </Text>
             <Text style={[styles.cellTextBold, styles.colDesc]}>
-              CLOSING BALANCE
+              {data.filterPerson ? "CLOSING OUTSTANDING" : "CLOSING BALANCE"}
             </Text>
             <Text style={[styles.cellText, styles.colCategory]}>—</Text>
-            <Text style={[styles.cellTextBold, styles.colType]}>Balance</Text>
+            <Text style={[styles.cellTextBold, styles.colType]}>
+              {data.filterPerson ? "Position" : "Balance"}
+            </Text>
             <Text style={[styles.debitText, styles.colDebit]}>
               {summary.totalDebit > 0 ? `-${formatAmount(summary.totalDebit)}` : "—"}
             </Text>
@@ -712,7 +767,7 @@ export const BankStatementPDF = ({ data }: { data: StatementData }) => {
           </View>
         </View>
 
-        {categories && categories.length > 0 && (
+        {categories && categories.length > 0 && !data.filterPerson && (
           <View wrap={false}>
             <Text style={styles.sectionHeading}>Current Category Balances</Text>
             <View style={styles.categoryBox}>

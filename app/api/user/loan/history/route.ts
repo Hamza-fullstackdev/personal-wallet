@@ -18,7 +18,6 @@ export async function GET(req: Request) {
       1,
     );
 
-    // Filtering parameters
     const status = url.searchParams.get("status");
     const search = url.searchParams.get("search");
     const startDate = url.searchParams.get("startDate");
@@ -42,7 +41,6 @@ export async function GET(req: Request) {
     const formatValue = (value: number) =>
       user.currency === "PKR" ? value : Number(value.toFixed(2));
 
-    // Build filter object
     const filter: Record<string, unknown> = { userId };
 
     if (status && status !== "all") {
@@ -56,7 +54,6 @@ export async function GET(req: Request) {
       ];
     }
 
-    // Date range filter
     if (startDate || endDate) {
       filter.date = {};
       if (startDate) {
@@ -72,7 +69,6 @@ export async function GET(req: Request) {
     const totalItems = await Loan.countDocuments(filter);
     const totalPages = Math.ceil(totalItems / limit) || 1;
 
-    // Get unique loan statuses
     const statuses = await Loan.distinct("status", { userId });
 
     const loans = await Loan.find(filter)

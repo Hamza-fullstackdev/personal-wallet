@@ -15,7 +15,6 @@ export async function GET(req: Request) {
       1,
     );
 
-    // Filtering parameters
     const type = url.searchParams.get("type");
     const search = url.searchParams.get("search");
     const startDate = url.searchParams.get("startDate");
@@ -23,7 +22,6 @@ export async function GET(req: Request) {
     const sortBy = url.searchParams.get("sortBy") || "createdAt";
     const sortOrder = url.searchParams.get("sortOrder") === "asc" ? 1 : -1;
 
-    // Build filter object
     const filter: Record<string, unknown> = { userId };
 
     if (type && type !== "all") {
@@ -37,7 +35,6 @@ export async function GET(req: Request) {
       ];
     }
 
-    // Date range filter
     if (startDate || endDate) {
       filter.createdAt = {};
       if (startDate) {
@@ -54,8 +51,6 @@ export async function GET(req: Request) {
 
     const totalItems = await Notification.countDocuments(filter);
     const totalPages = Math.ceil(totalItems / limit) || 1;
-
-    // Get unique notification types
     const types = await Notification.distinct("type", { userId });
 
     const notifications = await Notification.find(filter)

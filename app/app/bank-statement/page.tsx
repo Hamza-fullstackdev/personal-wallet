@@ -19,11 +19,13 @@ interface Category {
 
 export default function BankStatement() {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [people, setPeople] = useState<string[]>([]);
   const [periodFilter, setPeriodFilter] = useState("30");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [personFilter, setPersonFilter] = useState("all");
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
@@ -37,6 +39,16 @@ export default function BankStatement() {
       console.error("Failed to load categories:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getUserPeople = async () => {
+    try {
+      const res = await fetch("/api/user/loan/people");
+      const data = await res.json();
+      setPeople(data.people || []);
+    } catch (err) {
+      console.error("Failed to load people:", err);
     }
   };
 
@@ -68,7 +80,7 @@ export default function BankStatement() {
 
   useEffect(() => {
     getUserCategories();
-    // Default to Last 30 Days
+    getUserPeople();
     applyPeriod("30");
   }, []);
 
@@ -82,6 +94,7 @@ export default function BankStatement() {
       if (endDate) params.append("endDate", endDate);
       if (typeFilter !== "all") params.append("type", typeFilter);
       if (categoryFilter !== "all") params.append("category", categoryFilter);
+      if (personFilter !== "all") params.append("person", personFilter);
 
       const res = await fetch(
         `/api/user/bank-statement/pdf?${params.toString()}`
@@ -96,9 +109,10 @@ export default function BankStatement() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `bank-statement-${startDate || "all"}-to-${
-        endDate || "today"
-      }.pdf`;
+      const personPart =
+        personFilter !== "all" ? `-${personFilter.replace(/\s+/g, "_")}` : "";
+      a.download = `bank-statement${personPart}-${startDate || "all"}-to-${endDate || "today"
+        }.pdf`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -202,6 +216,40 @@ export default function BankStatement() {
               ))}
             </SelectContent>
           </Select>
+        </div>
+
+        <div className='flex flex-col gap-1'>
+          <div className='flex items-center justify-between'>
+            <Label htmlFor='personFilter'>Filter by Person</Label>
+            {people.length > 0 && (
+              <span className='text-xs text-muted-foreground'>
+                {people.length} {people.length === 1 ? "person" : "people"} found
+              </span>
+            )}
+          </div>
+          <Select value={personFilter} onValueChange={setPersonFilter}>
+            <SelectTrigger className='w-full mt-2' id='personFilter'>
+              <SelectValue placeholder='All People' />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='all'>All People (Default)</SelectItem>
+              {people.map((person: string) => (
+                <SelectItem key={person} value={person}>
+                  {person}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {personFilter !== "all" && (
+            <div className='rounded-md bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 p-2.5 mt-2'>
+              <p className='text-xs text-purple-700 dark:text-purple-300 font-medium'>
+                Privacy Protection Active for {personFilter}:
+              </p>
+              <p className='text-[11px] text-purple-600 dark:text-purple-400 mt-0.5'>
+                Category balances and overall wallet financials are hidden so you can safely share this statement.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className='mt-2'>

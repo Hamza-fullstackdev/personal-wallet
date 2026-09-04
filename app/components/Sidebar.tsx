@@ -30,6 +30,12 @@ const items = [
     url: "/app",
     icon: Inbox,
   },
+
+  {
+    title: "Bank Statement",
+    url: "/app/bank-statement",
+    icon: FileText,
+  },
   {
     title: "Categories",
     url: "/app/categories",
@@ -59,11 +65,6 @@ const items = [
     title: "History",
     url: "/app/history",
     icon: History,
-  },
-  {
-    title: "Bank Statement",
-    url: "/app/bank-statement",
-    icon: FileText,
   },
   {
     title: "Settings",

@@ -6,6 +6,7 @@ import Category from "@/app/model/Category";
 import Currencie from "@/app/model/Currencie";
 import Loan from "@/app/model/Loan";
 import User from "@/app/model/User";
+import mongoose from "mongoose";
 
 export interface StatementItem {
   id: string;
@@ -28,6 +29,7 @@ export interface StatementData {
     email: string;
     currency: string;
   };
+  filterPerson?: string;
   period: {
     startDate: string | null;
     endDate: string | null;
@@ -82,7 +84,6 @@ function parseNotification(
 
   if (type === "incoming") {
     typeLabel = "Incoming (Credit)";
-    // Title format: "Rs 5000 balance added in Cash"
     const match = title.match(/Rs\s*([\d,.]+)\s*balance added in\s*(.*)/i);
     if (match) {
       amount = cleanNum(match[1]);
@@ -95,7 +96,6 @@ function parseNotification(
     description = message && message !== title ? message : "Deposit / Inflow";
   } else if (type === "outgoing") {
     typeLabel = "Outgoing (Debit)";
-    // Title format: "Rs 1500 balance deducted from Bank"
     const match = title.match(/Rs\s*([\d,.]+)\s*balance deducted from\s*(.*)/i);
     if (match) {
       amount = cleanNum(match[1]);
@@ -108,7 +108,6 @@ function parseNotification(
     description = message && message !== title ? message : "Expense / Withdrawal";
   } else if (type === "loan") {
     typeLabel = "Loan Given (Debit)";
-    // Title format: "Loan balance of Rs 10000 deducted from Cash"
     const match = title.match(
       /(?:Loan balance of\s*)?Rs\s*([\d,.]+)\s*(?:balance\s*)?deducted from\s*(.*)/i
     );
@@ -123,7 +122,6 @@ function parseNotification(
     description = message ? `Loan to: ${message}` : "Loan Given";
   } else if (type === "return") {
     typeLabel = "Loan Returned (Credit)";
-    // Message format: "Ali loan has returned loan of Rs 5000, deposited in Bank"
     const match = message.match(
       /returned loan of Rs\s*([\d,.]+),\s*deposited in\s*(.*)/i
     );
@@ -138,7 +136,6 @@ function parseNotification(
     description = message || "Loan Repayment Received";
   } else if (type === "switch") {
     typeLabel = "Balance Switched";
-    // Message format: "Rs 2000 Switched from Bank to Cash"
     const match = message.match(/Rs\s*([\d,.]+)\s*Switched from\s*(.*?)\s*to\s*(.*)/i);
     if (match) {
       amount = cleanNum(match[1]);
@@ -147,7 +144,6 @@ function parseNotification(
       const fallback = message.match(/Rs\s*([\d,.]+)/i);
       amount = fallback ? cleanNum(fallback[1]) : 0;
     }
-    // Switch is an internal transfer: net wallet change = 0
     debit = 0;
     credit = 0;
     description = message || "Internal Category Transfer";
@@ -184,13 +180,13 @@ export async function GET(req: Request) {
     const endDateParam = url.searchParams.get("endDate");
     const categoryFilter = url.searchParams.get("category");
     const typeFilter = url.searchParams.get("type");
+    const personFilter = url.searchParams.get("person");
 
     const user = await User.findById(userId);
     if (!user) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
-    // Currency conversion setup
     let rate = 1;
     const currencies = await Currencie.find();
     if (user.currency && user.currency !== "PKR" && currencies.length > 0) {
@@ -203,19 +199,16 @@ export async function GET(req: Request) {
     const formatVal = (v: number) =>
       user.currency === "PKR" ? Math.round(v * rate) : Number((v * rate).toFixed(2));
 
-    // Get current category balances
     const categories = await Category.find({ userId });
     const currentTotalBalance = categories.reduce(
       (sum, cat) => sum + (Number(cat.balance) || 0),
       0
     );
 
-    // Fetch ALL notifications for this user sorted chronologically (oldest first)
     const allNotifications = await Notification.find({ userId })
       .sort({ createdAt: 1 })
       .lean();
 
-    // Parse all notifications into structured ledger entries
     const allLedger = allNotifications.map((notif) => {
       const parsed = parseNotification(notif, rate, user.currency);
       return {
@@ -231,7 +224,6 @@ export async function GET(req: Request) {
       };
     });
 
-    // Date range filtering
     let startTimestamp = 0;
     let endTimestamp = Infinity;
 
@@ -247,8 +239,8 @@ export async function GET(req: Request) {
       endTimestamp = e.getTime();
     }
 
-    // Compute Opening Balance at startDate:
-    // Opening Balance = Current Balance - (Net changes that occurred after startTimestamp)
+    const isPersonFilter = Boolean(personFilter && personFilter !== "all");
+
     const futureChanges = allLedger.filter((item) => {
       const itemTime = new Date(item.rawDate).getTime();
       return itemTime >= startTimestamp;
@@ -261,13 +253,11 @@ export async function GET(req: Request) {
 
     const openingBalance = formatVal(currentTotalBalance) - netChangeSinceStart;
 
-    // Filter transactions within the selected range [startTimestamp, endTimestamp]
     let filteredTransactions = allLedger.filter((item) => {
       const itemTime = new Date(item.rawDate).getTime();
       return itemTime >= startTimestamp && itemTime <= endTimestamp;
     });
 
-    // Apply optional type or category filter if requested
     if (typeFilter && typeFilter !== "all") {
       filteredTransactions = filteredTransactions.filter(
         (t) => t.type === typeFilter
@@ -280,11 +270,52 @@ export async function GET(req: Request) {
       );
     }
 
-    // Calculate Running Balance for each transaction in the selected window
-    let running = openingBalance;
+    let personOpeningOutstanding = 0;
+
+    if (isPersonFilter && personFilter) {
+      const personLoans = await Loan.find({
+        userId: new mongoose.Types.ObjectId(String(userId)),
+        name: { $regex: new RegExp(`^${personFilter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") },
+      }).lean();
+
+      const personReasons = new Set(
+        personLoans.map((l: any) => (l.reason || "").trim().toLowerCase())
+      );
+
+      const isPersonTx = (t: any) => {
+        if (t.type === "loan") {
+          return personReasons.has((t.description || "").replace(/^Loan to:\s*/i, "").trim().toLowerCase());
+        }
+        if (t.type === "return") {
+          const msgLower = (t.description || "").toLowerCase();
+          return msgLower.startsWith(personFilter.toLowerCase());
+        }
+        return false;
+      };
+
+      const priorPersonTxs = allLedger.filter((item) => {
+        const itemTime = new Date(item.rawDate).getTime();
+        return itemTime < startTimestamp && isPersonTx(item);
+      });
+
+      personOpeningOutstanding = priorPersonTxs.reduce(
+        (acc, item) => acc + (item.debit - item.credit),
+        0
+      );
+
+      filteredTransactions = filteredTransactions.filter(isPersonTx).map((item) => ({
+        ...item,
+        category: "Loan Record",
+      }));
+    }
+    let running = isPersonFilter ? personOpeningOutstanding : openingBalance;
     const transactionsWithRunningBalance: StatementItem[] = filteredTransactions.map(
       (item) => {
-        running = running + item.credit - item.debit;
+        if (isPersonFilter) {
+          running = running + item.debit - item.credit;
+        } else {
+          running = running + item.credit - item.debit;
+        }
         return {
           ...item,
           runningBalance: Number(running.toFixed(2)),
@@ -292,14 +323,17 @@ export async function GET(req: Request) {
       }
     );
 
-    // Compute summary metrics
-    const totalIncoming = filteredTransactions
-      .filter((t) => t.type === "incoming")
-      .reduce((sum, t) => sum + t.credit, 0);
+    const totalIncoming = isPersonFilter
+      ? 0
+      : filteredTransactions
+        .filter((t) => t.type === "incoming")
+        .reduce((sum, t) => sum + t.credit, 0);
 
-    const totalOutgoing = filteredTransactions
-      .filter((t) => t.type === "outgoing")
-      .reduce((sum, t) => sum + t.debit, 0);
+    const totalOutgoing = isPersonFilter
+      ? 0
+      : filteredTransactions
+        .filter((t) => t.type === "outgoing")
+        .reduce((sum, t) => sum + t.debit, 0);
 
     const totalLoanGiven = filteredTransactions
       .filter((t) => t.type === "loan")
@@ -317,13 +351,21 @@ export async function GET(req: Request) {
       (sum, t) => sum + t.debit,
       0
     );
-    const netCashFlow = totalCredit - totalDebit;
-    const closingBalance =
-      transactionsWithRunningBalance.length > 0
+    const netCashFlow = isPersonFilter
+      ? totalLoanReturned - totalLoanGiven
+      : totalCredit - totalDebit;
+
+    const closingBalance = isPersonFilter
+      ? Number(running.toFixed(2))
+      : transactionsWithRunningBalance.length > 0
         ? transactionsWithRunningBalance[
-            transactionsWithRunningBalance.length - 1
-          ].runningBalance
+          transactionsWithRunningBalance.length - 1
+        ].runningBalance
         : openingBalance;
+
+    const effectiveOpeningBalance = isPersonFilter
+      ? Number(personOpeningOutstanding.toFixed(2))
+      : Number(openingBalance.toFixed(2));
 
     const statementRef = `STMT-${new Date()
       .toISOString()
@@ -336,6 +378,8 @@ export async function GET(req: Request) {
         email: user.email || "",
         currency: user.currency || "PKR",
       },
+      filterPerson:
+        personFilter && personFilter !== "all" ? personFilter : undefined,
       period: {
         startDate: startDateParam || (allLedger[0]?.rawDate?.slice(0, 10) ?? null),
         endDate: endDateParam || new Date().toISOString().slice(0, 10),
@@ -347,7 +391,7 @@ export async function GET(req: Request) {
         statementRef,
       },
       summary: {
-        openingBalance: Number(openingBalance.toFixed(2)),
+        openingBalance: effectiveOpeningBalance,
         closingBalance: Number(closingBalance.toFixed(2)),
         totalIncoming: Number(totalIncoming.toFixed(2)),
         totalOutgoing: Number(totalOutgoing.toFixed(2)),
@@ -358,11 +402,13 @@ export async function GET(req: Request) {
         netCashFlow: Number(netCashFlow.toFixed(2)),
         transactionCount: filteredTransactions.length,
       },
-      categories: categories.map((c) => ({
-        id: String(c._id),
-        name: c.name,
-        balance: formatVal(Number(c.balance) || 0),
-      })),
+      categories: isPersonFilter
+        ? []
+        : categories.map((c) => ({
+          id: String(c._id),
+          name: c.name,
+          balance: formatVal(Number(c.balance) || 0),
+        })),
       transactions: transactionsWithRunningBalance,
     };
 
