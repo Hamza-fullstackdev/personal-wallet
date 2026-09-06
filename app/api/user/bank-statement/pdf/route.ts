@@ -189,6 +189,238 @@ export async function GET(req: Request) {
 
     const isPersonFilter = Boolean(personFilter && personFilter !== "all");
 
+    // If an individual is selected, strictly query that person's loans from the Loan collection
+    if (isPersonFilter && personFilter) {
+      const trimmedPerson = personFilter.trim();
+      const escapedPerson = trimmedPerson.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+      const personLoans = await Loan.find({
+        userId: new mongoose.Types.ObjectId(String(userId)),
+        name: { $regex: new RegExp(`^${escapedPerson}$`, "i") },
+      })
+        .populate("categoryId")
+        .sort({ date: 1, createdAt: 1 })
+        .lean();
+
+      const returnNotifs = await Notification.find({
+        userId: new mongoose.Types.ObjectId(String(userId)),
+        type: "return",
+      })
+        .sort({ createdAt: 1 })
+        .lean();
+
+      const personReturnNotifs = returnNotifs.filter((n: any) => {
+        const msg = (n.message || "").toLowerCase();
+        return msg.includes(trimmedPerson.toLowerCase());
+      });
+
+      const usedNotifIds = new Set<string>();
+
+      interface IndividualEvent {
+        id: string;
+        timestamp: number;
+        rawDate: string;
+        date: string;
+        type: "loan" | "return";
+        typeLabel: string;
+        title: string;
+        description: string;
+        category: string;
+        debit: number;
+        credit: number;
+        amount: number;
+      }
+
+      const individualEvents: IndividualEvent[] = [];
+
+      for (const loan of personLoans as any[]) {
+        const loanCategoryName =
+          loan.categoryId && typeof loan.categoryId === "object" && loan.categoryId.name
+            ? loan.categoryId.name
+            : "Loan";
+
+        const loanDateObj = loan.date ? new Date(loan.date) : new Date(loan.createdAt);
+        const loanAmount = formatVal(loan.balance || 0);
+
+        // 1. Loan Given Event (Debit / Amount Given)
+        individualEvents.push({
+          id: `${loan._id}-given`,
+          timestamp: loanDateObj.getTime(),
+          rawDate: loanDateObj.toISOString(),
+          date: loanDateObj.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+          }),
+          type: "loan",
+          typeLabel: "Loan Given",
+          title: `Loan to ${loan.name}`,
+          description: loan.reason
+            ? `Loan to ${loan.name} - ${loan.reason}`
+            : `Loan to ${loan.name}`,
+          category: loanCategoryName,
+          debit: loanAmount,
+          credit: 0,
+          amount: loanAmount,
+        });
+
+        // 2. Loan Returned Event (Credit / Amount Repaid)
+        if (loan.status === "returned") {
+          let returnDateObj = loan.updatedAt
+            ? new Date(loan.updatedAt)
+            : loan.return
+            ? new Date(loan.return)
+            : loanDateObj;
+          let returnCategoryName = loanCategoryName;
+
+          const matchedNotif = personReturnNotifs.find((n: any) => {
+            if (usedNotifIds.has(String(n._id))) return false;
+            const notifTime = new Date(n.createdAt).getTime();
+            return notifTime >= loanDateObj.getTime() - 60000;
+          });
+
+          if (matchedNotif) {
+            usedNotifIds.add(String(matchedNotif._id));
+            returnDateObj = new Date(matchedNotif.createdAt);
+            const catMatch = (matchedNotif.message || "").match(/deposited in\s*(.*)/i);
+            if (catMatch && catMatch[1]) {
+              returnCategoryName = catMatch[1].trim();
+            }
+          }
+
+          individualEvents.push({
+            id: `${loan._id}-returned`,
+            timestamp: returnDateObj.getTime(),
+            rawDate: returnDateObj.toISOString(),
+            date: returnDateObj.toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "short",
+              day: "2-digit",
+            }),
+            type: "return",
+            typeLabel: "Loan Returned",
+            title: `Loan Returned by ${loan.name}`,
+            description: loan.reason
+              ? `Repayment from ${loan.name} - ${loan.reason}`
+              : `Repayment from ${loan.name}`,
+            category: returnCategoryName,
+            debit: 0,
+            credit: loanAmount,
+            amount: loanAmount,
+          });
+        }
+      }
+
+      individualEvents.sort((a, b) => a.timestamp - b.timestamp);
+
+      const priorEvents = individualEvents.filter((item) => item.timestamp < startTimestamp);
+      const personOpeningOutstanding = priorEvents.reduce(
+        (acc, item) => acc + (item.debit - item.credit),
+        0
+      );
+
+      let periodEvents = individualEvents.filter(
+        (item) => item.timestamp >= startTimestamp && item.timestamp <= endTimestamp
+      );
+
+      if (typeFilter && typeFilter !== "all") {
+        periodEvents = periodEvents.filter((t) => t.type === typeFilter);
+      }
+
+      if (categoryFilter && categoryFilter !== "all") {
+        periodEvents = periodEvents.filter(
+          (t) => t.category.toLowerCase() === categoryFilter.toLowerCase()
+        );
+      }
+
+      let running = personOpeningOutstanding;
+      const transactionsWithRunningBalance: StatementItem[] = periodEvents.map((item) => {
+        running = running + item.debit - item.credit;
+        return {
+          id: item.id,
+          date: item.date,
+          rawDate: item.rawDate,
+          type: item.type,
+          typeLabel: item.typeLabel,
+          title: item.title,
+          description: item.description,
+          category: item.category,
+          debit: item.debit,
+          credit: item.credit,
+          amount: item.amount,
+          runningBalance: Number(running.toFixed(2)),
+        };
+      });
+
+      const totalLoanGiven = periodEvents
+        .filter((t) => t.type === "loan")
+        .reduce((sum, t) => sum + t.debit, 0);
+
+      const totalLoanReturned = periodEvents
+        .filter((t) => t.type === "return")
+        .reduce((sum, t) => sum + t.credit, 0);
+
+      const totalCredit = totalLoanReturned;
+      const totalDebit = totalLoanGiven;
+      const netCashFlow = totalLoanReturned - totalLoanGiven;
+      const closingBalance = Number(running.toFixed(2));
+
+      const statementRef = `STMT-${new Date()
+        .toISOString()
+        .slice(0, 10)
+        .replace(/-/g, "")}-${userId.toString().slice(-4).toUpperCase()}`;
+
+      const statementData: StatementData = {
+        accountHolder: {
+          name: user.name || "Wallet User",
+          email: user.email || "",
+          currency: user.currency || "PKR",
+        },
+        filterPerson: trimmedPerson,
+        period: {
+          startDate: startDateParam || (individualEvents[0]?.rawDate?.slice(0, 10) ?? null),
+          endDate: endDateParam || new Date().toISOString().slice(0, 10),
+          statementDate: new Date().toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }),
+          statementRef,
+        },
+        summary: {
+          openingBalance: Number(personOpeningOutstanding.toFixed(2)),
+          closingBalance: Number(closingBalance.toFixed(2)),
+          totalIncoming: 0,
+          totalOutgoing: 0,
+          totalLoanGiven: Number(totalLoanGiven.toFixed(2)),
+          totalLoanReturned: Number(totalLoanReturned.toFixed(2)),
+          totalCredit: Number(totalCredit.toFixed(2)),
+          totalDebit: Number(totalDebit.toFixed(2)),
+          netCashFlow: Number(netCashFlow.toFixed(2)),
+          transactionCount: periodEvents.length,
+        },
+        categories: [],
+        transactions: transactionsWithRunningBalance,
+      };
+
+      const pdfBuffer = await renderToBuffer(
+        React.createElement(BankStatementPDF, { data: statementData }) as any
+      );
+
+      const sanitizedPerson = `-${trimmedPerson.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
+      const filename = `bank-statement${sanitizedPerson}-${startDateParam || "all"}-to-${endDateParam || "today"}.pdf`;
+
+      return new Response(pdfBuffer as unknown as BodyInit, {
+        status: 200,
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="${filename}"`,
+          "Cache-Control": "no-store, max-age=0",
+        },
+      });
+    }
+
+    // General Wallet Statement (All People / Non-individual)
     const futureChanges = allLedger.filter((item) => {
       const itemTime = new Date(item.rawDate).getTime();
       return itemTime >= startTimestamp;
@@ -218,52 +450,10 @@ export async function GET(req: Request) {
       );
     }
 
-    let personOpeningOutstanding = 0;
-
-    if (isPersonFilter && personFilter) {
-      const personLoans = await Loan.find({
-        userId: new mongoose.Types.ObjectId(String(userId)),
-        name: { $regex: new RegExp(`^${personFilter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") },
-      }).lean();
-
-      const personReasons = new Set(
-        personLoans.map((l: any) => (l.reason || "").trim().toLowerCase())
-      );
-
-      const isPersonTx = (t: any) => {
-        if (t.type === "loan") {
-          return personReasons.has((t.description || "").replace(/^Loan to:\s*/i, "").trim().toLowerCase());
-        }
-        if (t.type === "return") {
-          const msgLower = (t.description || "").toLowerCase();
-          return msgLower.startsWith(personFilter.toLowerCase());
-        }
-        return false;
-      };
-
-      const priorPersonTxs = allLedger.filter((item) => {
-        const itemTime = new Date(item.rawDate).getTime();
-        return itemTime < startTimestamp && isPersonTx(item);
-      });
-
-      personOpeningOutstanding = priorPersonTxs.reduce(
-        (acc, item) => acc + (item.debit - item.credit),
-        0
-      );
-
-      filteredTransactions = filteredTransactions.filter(isPersonTx).map((item) => ({
-        ...item,
-        category: "Loan Record",
-      }));
-    }
-    let running = isPersonFilter ? personOpeningOutstanding : openingBalance;
+    let running = openingBalance;
     const transactionsWithRunningBalance: StatementItem[] = filteredTransactions.map(
       (item) => {
-        if (isPersonFilter) {
-          running = running + item.debit - item.credit;
-        } else {
-          running = running + item.credit - item.debit;
-        }
+        running = running + item.credit - item.debit;
         return {
           ...item,
           runningBalance: Number(running.toFixed(2)),
@@ -271,17 +461,13 @@ export async function GET(req: Request) {
       }
     );
 
-    const totalIncoming = isPersonFilter
-      ? 0
-      : filteredTransactions
-        .filter((t) => t.type === "incoming")
-        .reduce((sum, t) => sum + t.credit, 0);
+    const totalIncoming = filteredTransactions
+      .filter((t) => t.type === "incoming")
+      .reduce((sum, t) => sum + t.credit, 0);
 
-    const totalOutgoing = isPersonFilter
-      ? 0
-      : filteredTransactions
-        .filter((t) => t.type === "outgoing")
-        .reduce((sum, t) => sum + t.debit, 0);
+    const totalOutgoing = filteredTransactions
+      .filter((t) => t.type === "outgoing")
+      .reduce((sum, t) => sum + t.debit, 0);
 
     const totalLoanGiven = filteredTransactions
       .filter((t) => t.type === "loan")
@@ -299,21 +485,14 @@ export async function GET(req: Request) {
       (sum, t) => sum + t.debit,
       0
     );
-    const netCashFlow = isPersonFilter
-      ? totalLoanReturned - totalLoanGiven
-      : totalCredit - totalDebit;
+    const netCashFlow = totalCredit - totalDebit;
 
-    const closingBalance = isPersonFilter
-      ? Number(running.toFixed(2))
-      : transactionsWithRunningBalance.length > 0
+    const closingBalance =
+      transactionsWithRunningBalance.length > 0
         ? transactionsWithRunningBalance[
-          transactionsWithRunningBalance.length - 1
-        ].runningBalance
+            transactionsWithRunningBalance.length - 1
+          ].runningBalance
         : openingBalance;
-
-    const effectiveOpeningBalance = isPersonFilter
-      ? Number(personOpeningOutstanding.toFixed(2))
-      : Number(openingBalance.toFixed(2));
 
     const statementRef = `STMT-${new Date()
       .toISOString()
@@ -326,8 +505,6 @@ export async function GET(req: Request) {
         email: user.email || "",
         currency: user.currency || "PKR",
       },
-      filterPerson:
-        personFilter && personFilter !== "all" ? personFilter : undefined,
       period: {
         startDate: startDateParam || (allLedger[0]?.rawDate?.slice(0, 10) ?? null),
         endDate: endDateParam || new Date().toISOString().slice(0, 10),
@@ -339,7 +516,7 @@ export async function GET(req: Request) {
         statementRef,
       },
       summary: {
-        openingBalance: effectiveOpeningBalance,
+        openingBalance: Number(openingBalance.toFixed(2)),
         closingBalance: Number(closingBalance.toFixed(2)),
         totalIncoming: Number(totalIncoming.toFixed(2)),
         totalOutgoing: Number(totalOutgoing.toFixed(2)),
@@ -350,13 +527,11 @@ export async function GET(req: Request) {
         netCashFlow: Number(netCashFlow.toFixed(2)),
         transactionCount: filteredTransactions.length,
       },
-      categories: isPersonFilter
-        ? []
-        : categories.map((c) => ({
-          id: String(c._id),
-          name: c.name,
-          balance: formatVal(Number(c.balance) || 0),
-        })),
+      categories: categories.map((c) => ({
+        id: String(c._id),
+        name: c.name,
+        balance: formatVal(Number(c.balance) || 0),
+      })),
       transactions: transactionsWithRunningBalance,
     };
 
@@ -364,13 +539,7 @@ export async function GET(req: Request) {
       React.createElement(BankStatementPDF, { data: statementData }) as any
     );
 
-    const sanitizedPerson =
-      personFilter && personFilter !== "all"
-        ? `-${personFilter.replace(/[^a-zA-Z0-9_-]/g, "_")}`
-        : "";
-
-    const filename = `bank-statement${sanitizedPerson}-${startDateParam || "all"}-to-${endDateParam || "today"
-      }.pdf`;
+    const filename = `bank-statement-${startDateParam || "all"}-to-${endDateParam || "today"}.pdf`;
 
     return new Response(pdfBuffer as unknown as BodyInit, {
       status: 200,

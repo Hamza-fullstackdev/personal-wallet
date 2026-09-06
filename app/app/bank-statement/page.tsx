@@ -185,18 +185,30 @@ export default function BankStatement() {
         </div>
 
         <div className='flex flex-col gap-1'>
-          <Label htmlFor='typeFilter'>Movement Type</Label>
+          <Label htmlFor='typeFilter'>
+            {personFilter !== "all" ? "Loan Activity Type" : "Movement Type"}
+          </Label>
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className='w-full mt-2'>
-              <SelectValue placeholder='All Movements' />
+              <SelectValue placeholder={personFilter !== "all" ? "All Loan Activity" : "All Movements"} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value='all'>All Movements</SelectItem>
-              <SelectItem value='incoming'>Incomings</SelectItem>
-              <SelectItem value='outgoing'>Outgoings</SelectItem>
-              <SelectItem value='loan'>Loan Given</SelectItem>
-              <SelectItem value='return'>Loan Returned</SelectItem>
-              <SelectItem value='switch'>Balance Switch</SelectItem>
+              {personFilter !== "all" ? (
+                <>
+                  <SelectItem value='all'>All Loan Activity</SelectItem>
+                  <SelectItem value='loan'>Loan Given</SelectItem>
+                  <SelectItem value='return'>Loan Returned</SelectItem>
+                </>
+              ) : (
+                <>
+                  <SelectItem value='all'>All Movements</SelectItem>
+                  <SelectItem value='incoming'>Incomings</SelectItem>
+                  <SelectItem value='outgoing'>Outgoings</SelectItem>
+                  <SelectItem value='loan'>Loan Given</SelectItem>
+                  <SelectItem value='return'>Loan Returned</SelectItem>
+                  <SelectItem value='switch'>Balance Switch</SelectItem>
+                </>
+              )}
             </SelectContent>
           </Select>
         </div>
@@ -227,7 +239,15 @@ export default function BankStatement() {
               </span>
             )}
           </div>
-          <Select value={personFilter} onValueChange={setPersonFilter}>
+          <Select
+            value={personFilter}
+            onValueChange={(val) => {
+              setPersonFilter(val);
+              if (val !== "all" && ["incoming", "outgoing", "switch"].includes(typeFilter)) {
+                setTypeFilter("all");
+              }
+            }}
+          >
             <SelectTrigger className='w-full mt-2' id='personFilter'>
               <SelectValue placeholder='All People' />
             </SelectTrigger>
@@ -241,12 +261,12 @@ export default function BankStatement() {
             </SelectContent>
           </Select>
           {personFilter !== "all" && (
-            <div className='rounded-md bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 p-2.5 mt-2'>
-              <p className='text-xs text-purple-700 dark:text-purple-300 font-medium'>
-                Privacy Protection Active for {personFilter}:
+            <div className='rounded-lg bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 p-3 mt-2 space-y-1'>
+              <p className='text-xs text-purple-800 dark:text-purple-200 font-semibold flex items-center gap-1.5'>
+                <span>Individual Statement Mode:</span> {personFilter}
               </p>
-              <p className='text-[11px] text-purple-600 dark:text-purple-400 mt-0.5'>
-                Category balances and overall wallet financials are hidden so you can safely share this statement.
+              <p className='text-[11px] text-purple-600 dark:text-purple-400'>
+                This statement strictly includes only the loan records (loans given & loans returned) for <strong>{personFilter}</strong>. All unrelated wallet transactions and category balances are excluded.
               </p>
             </div>
           )}
@@ -260,6 +280,8 @@ export default function BankStatement() {
           >
             {downloading
               ? "Generating PDF Statement..."
+              : personFilter !== "all"
+              ? `Download Statement for ${personFilter}`
               : "Download Bank Statement"}
           </button>
         </div>

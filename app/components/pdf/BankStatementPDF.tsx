@@ -389,32 +389,21 @@ const PageDecoration = () => (
   >
     <Polygon points="0,0 130,0 0,157" fill="#602080" />
     <Polygon points="130,0 336,0 38,113" fill="#e94ca2" />
-    <Polygon points="707,0 793.7,0 793.7,94" fill="#602080" />
-    <Rect x={707} y={0} width={29} height={29} fill="#e94ca2" />
-    <Rect x={736} y={0} width={29} height={29} fill="#602080" />
-    <Rect x={765} y={0} width={28.7} height={29} fill="#e94ca2" />
+    {/* Pink triangles */}
+    <Polygon points="778.7,142 793.7,158 793.7,142" fill="#EC3EA6" />
+    <Polygon points="669.7,70 704.7,70 705.7,105 775.7,106 739.7,105 704.7,70" fill="#EC3EA6" />
+    <Polygon points="776.7,38 775.7,71 742.7,71 775.7,104 776.7,71 793.7,70 776.7,69" fill="#EC3EA6" />
+    <Polygon points="706.7,35 740.7,69 740.7,35 768.7,34" fill="#EC3EA6" />
+    <Polygon points="742.7,0 793.7,51 793.7,0" fill="#EC3EA6" />
+    <Polygon points="635.7,0 668.7,33 668.7,0" fill="#EC3EA6" />
 
-    <Rect x={707} y={29} width={29} height={29} fill="#602080" />
-    <Rect x={736} y={29} width={29} height={29} fill="#e94ca2" />
-    <Rect x={765} y={29} width={28.7} height={29} fill="#602080" />
-
-    <Rect x={707} y={58} width={29} height={29} fill="#e94ca2" />
-    <Rect x={736} y={58} width={29} height={29} fill="#602080" />
-    <Rect x={765} y={58} width={28.7} height={29} fill="#e94ca2" />
-
-    <Polygon
-      points="707,0 723,0 793.7,70.7 793.7,87 777,87 707,17"
-      fill="#ffffff"
-    />
-
-    <Rect x={736} y={29} width={29} height={29} fill="#ffffff" />
-    <Rect x={765} y={58} width={28.7} height={29} fill="#ffffff" />
-
-    <Polygon points="707,0 707,29 736,58 736,29" fill="#ffffff" />
-    <Polygon points="736,0 736,29 765,58 765,29" fill="#ffffff" />
-    <Polygon points="765,0 765,29 793.7,57.7 793.7,29" fill="#ffffff" />
-
-    <Polygon points="793.7,87 793.7,112 781,99" fill="#e94ca2" />
+    {/* Purple triangles */}
+    <Polygon points="778.7,107 793.7,122 793.7,107" fill="#5A1F8C" />
+    <Polygon points="741.7,71 741.7,105 775.7,105" fill="#5A1F8C" />
+    <Polygon points="777.7,36 777.7,69 793.7,69 793.7,52" fill="#5A1F8C" />
+    <Polygon points="669.7,35 669.7,69 703.7,69" fill="#5A1F8C" />
+    <Polygon points="741.7,0 741.7,33 774.7,34" fill="#5A1F8C" />
+    <Polygon points="671.7,0 704.7,33 704.7,0" fill="#5A1F8C" />
 
     <Polygon points="0,951 310,1122.5 0,1122.5" fill="#602080" />
     <Polygon points="0,951 0,1030 252,1122.5 310,1122.5" fill="#602080" />
