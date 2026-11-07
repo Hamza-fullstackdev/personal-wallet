@@ -12,7 +12,14 @@ export interface StatementItem {
   id: string;
   date: string;
   rawDate: string;
-  type: "incoming" | "outgoing" | "loan" | "return" | "switch" | "other";
+  type:
+    | "incoming"
+    | "outgoing"
+    | "loan"
+    | "return"
+    | "switch"
+    | "investment"
+    | "other";
   typeLabel: string;
   title: string;
   description: string;
@@ -61,7 +68,14 @@ function parseNotification(
   rate: number,
   currency: string
 ): {
-  type: "incoming" | "outgoing" | "loan" | "return" | "switch" | "other";
+  type:
+    | "incoming"
+    | "outgoing"
+    | "loan"
+    | "return"
+    | "switch"
+    | "investment"
+    | "other";
   typeLabel: string;
   category: string;
   amount: number;
@@ -147,6 +161,22 @@ function parseNotification(
     debit = 0;
     credit = 0;
     description = message || "Internal Category Transfer";
+  } else if (type === "investment") {
+    typeLabel = "Investment (Debit)";
+    const match = title.match(/Rs\s*([\d,.]+)\s*invested in\s*(.*)/i);
+    if (match) {
+      amount = cleanNum(match[1]);
+      description = `Investment: ${match[2]?.trim() || "Todo"}`;
+    } else {
+      const fallback = title.match(/Rs\s*([\d,.]+)/i);
+      amount = fallback ? cleanNum(fallback[1]) : 0;
+      description = message || title;
+    }
+    const categoryMatch = message.match(/Deducted from\s*(.*)/i);
+    if (categoryMatch && categoryMatch[1]) {
+      category = categoryMatch[1].trim();
+    }
+    debit = amount;
   } else {
     typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
     const fallback = (title + " " + message).match(/Rs\s*([\d,.]+)/i);
@@ -158,7 +188,14 @@ function parseNotification(
     currency === "PKR" ? Math.round(v * rate) : Number((v * rate).toFixed(2));
 
   return {
-    type: (["incoming", "outgoing", "loan", "return", "switch"].includes(type)
+    type: ([
+      "incoming",
+      "outgoing",
+      "loan",
+      "return",
+      "switch",
+      "investment",
+    ].includes(type)
       ? type
       : "other") as StatementItem["type"],
     typeLabel,
